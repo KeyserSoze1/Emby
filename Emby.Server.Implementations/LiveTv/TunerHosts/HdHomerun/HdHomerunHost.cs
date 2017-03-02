@@ -173,7 +173,7 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
 
             var tuners = new List<LiveTvTunerInfo>();
 
-            var uri = new Uri(info.Url);
+            var uri = new Uri(GetApiUrl(info, false));
 
             using (var manager = new HdHomerunManager(_socketFactory))
             {
