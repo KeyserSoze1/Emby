@@ -53,15 +53,15 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
 
             var mediaSource = OriginalMediaSource;
 
-            var splitString = mediaSource.Path.Split('_');
-            var remoteIp = splitString[0];
-            var localPort = Convert.ToInt32(splitString[1]);
+            var uri = new Uri(mediaSource.Path);
+            // We need to find a local udp port to have the homerun stream to.  NetworkManager::FindRandomUdpPort() or something similar
+            var localPort = 0;
 
-            _logger.Info("Opening Legacy HDHR Live stream from {0}", remoteIp);
+            _logger.Info("Opening Legacy HDHR Live stream from {0}", uri.Host);
 
             var taskCompletionSource = new TaskCompletionSource<bool>();
 
-            StartStreaming(remoteIp, localPort, taskCompletionSource, _liveStreamCancellationTokenSource.Token);
+            StartStreaming(uri.Host, localPort, taskCompletionSource, _liveStreamCancellationTokenSource.Token);
 
             //OpenedMediaSource.Protocol = MediaProtocol.File;
             //OpenedMediaSource.Path = tempFile;

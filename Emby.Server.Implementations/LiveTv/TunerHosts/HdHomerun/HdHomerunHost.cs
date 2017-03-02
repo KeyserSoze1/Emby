@@ -106,7 +106,7 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
                 AudioCodec = i.AudioCodec,
                 VideoCodec = i.VideoCodec,
                 ChannelType = ChannelType.TV,
-                IsLegacyTuner = (info.Url ?? string.Empty).StartsWith("hdhomerun", StringComparison.OrdinalIgnoreCase)
+                IsLegacyTuner = (i.URL ?? string.Empty).StartsWith("hdhomerun", StringComparison.OrdinalIgnoreCase) // we need a way to save the url.  or at a minimum the frequency/program out of the url for the legacy version
 
             }).Cast<ChannelInfo>().ToList();
         }
