@@ -85,6 +85,7 @@ namespace Emby.Common.Implementations.Net
             try
             {
                 retVal.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                retVal.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
                 return new UdpSocket(retVal, localPort, IPAddress.Any);
             }
             catch

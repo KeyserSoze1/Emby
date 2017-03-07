@@ -13,6 +13,8 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Model.Dlna;
 using MediaBrowser.Model.Events;
 using MediaBrowser.Model.Serialization;
+using MediaBrowser.Model.Net;
+using MediaBrowser.Model.Threading;
 
 namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
 {
@@ -25,8 +27,11 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly IHttpClient _httpClient;
         private readonly IJsonSerializer _json;
+        private readonly ISocketFactory _socketFactory;
+        private readonly ITimerFactory _timerFactory;
+        private ITimer _timer;
 
-        public HdHomerunDiscovery(IDeviceDiscovery deviceDiscovery, IServerConfigurationManager config, ILogger logger, ILiveTvManager liveTvManager, IHttpClient httpClient, IJsonSerializer json)
+        public HdHomerunDiscovery(IDeviceDiscovery deviceDiscovery, IServerConfigurationManager config, ILogger logger, ILiveTvManager liveTvManager, IHttpClient httpClient, IJsonSerializer json, ISocketFactory socketFactory, ITimerFactory timerFactory)
         {
             _deviceDiscovery = deviceDiscovery;
             _config = config;
@@ -34,11 +39,14 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
             _liveTvManager = liveTvManager;
             _httpClient = httpClient;
             _json = json;
+            _socketFactory = socketFactory;
+            _timerFactory = timerFactory;
         }
 
         public void Run()
         {
             _deviceDiscovery.DeviceDiscovered += _deviceDiscovery_DeviceDiscovered;
+            _timer = _timerFactory.Create(DiscoverDevices, null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(5));
         }
 
         void _deviceDiscovery_DeviceDiscovered(object sender, GenericEventArgs<UpnpDeviceInfo> e)
@@ -66,6 +74,34 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
                 }
             }
         }
+
+        private async void DiscoverDevices(object state)
+        {
+            // Create udp broadcast discovery message
+            byte[] discBytes = { 0, 2, 0, 12, 1, 4, 255, 255, 255, 255, 2, 4, 255, 255, 255, 255, 115, 204, 125, 143 };
+            using (var udpClient = _socketFactory.CreateUdpSocket(0))
+            {
+                // Need a way to set the Receive timeout on the socket otherwise this might never timeout?
+                try
+                {
+                    await udpClient.SendAsync(discBytes, discBytes.Length, new IpEndPointInfo(new IpAddressInfo("255.255.255.255", IpAddressFamily.InterNetwork), 65001), CancellationToken.None);
+                    while (true)
+                    {
+                        var response = await udpClient.ReceiveAsync(CancellationToken.None);
+                        var deviceIp = response.RemoteEndPoint.IpAddress.Address;
+                        // check to make sure we have enough bytes received to be a valid message and make sure the 2nd byte is the discover reply byte
+                        if (response.ReceivedBytes > 13 && response.Buffer[1] == 3)
+                            AddDevice("http://" + deviceIp);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    // Socket timeout indicates all messages have been received.
+                }
+            }
+        }
+
 
         private async void AddDevice(string url)
         {
@@ -153,6 +189,11 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
 
         public void Dispose()
         {
+            if (_timer != null)
+            {
+                _timer.Dispose();
+                _timer = null;
+            }
         }
     }
 }
