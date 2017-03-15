@@ -450,6 +450,10 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
                     videoCodec = channel.VideoCodec;
                 }
                 audioCodec = channel.AudioCodec;
+
+                // Report worst case bitrate?
+                videoBitrate = 15000000;
+                audioBitrate = 448000;
             }
 
             // normalize
