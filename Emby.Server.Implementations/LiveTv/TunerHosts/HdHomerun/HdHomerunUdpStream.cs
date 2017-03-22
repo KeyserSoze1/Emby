@@ -89,6 +89,7 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
 
         private async Task StartStreaming(string remoteIp, int localPort, TaskCompletionSource<bool> openTaskCompletionSource, CancellationToken cancellationToken)
         {
+            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(5000).Token, cancellationToken).Token;
             await Task.Run(async () =>
             {
                 var isFirstAttempt = true;
@@ -137,6 +138,7 @@ namespace Emby.Server.Implementations.LiveTv.TunerHosts.HdHomerun
                             }
                             catch (OperationCanceledException)
                             {
+				_logger.Info("HDHR UDP stream cancelled or timed out from {0}:", remoteAddress);
                                 break;
                             }
                             catch (Exception ex)
