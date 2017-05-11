@@ -236,11 +236,11 @@ namespace Emby.Drawing.Skia
             var hasBackgroundColor = !string.IsNullOrWhiteSpace(options.BackgroundColor);
             var hasForegroundColor = !string.IsNullOrWhiteSpace(options.ForegroundLayer);
             var blur = options.Blur ?? 0;
-            var hasIndicator = !options.AddPlayedIndicator && !options.UnplayedCount.HasValue && options.PercentPlayed.Equals(0);
+            var hasIndicator = options.AddPlayedIndicator || options.UnplayedCount.HasValue || !options.PercentPlayed.Equals(0);
 
             using (var bitmap = GetBitmap(inputPath, options.CropWhiteSpace))
             {
-                using (var resizedBitmap = new SKBitmap(width, height, bitmap.ColorType, bitmap.AlphaType))
+                using (var resizedBitmap = new SKBitmap(width, height))//, bitmap.ColorType, bitmap.AlphaType))
                 {
                     // scale image
                     var resizeMethod = SKBitmapResizeMethod.Lanczos3;
@@ -258,7 +258,7 @@ namespace Emby.Drawing.Skia
                     }
 
                     // create bitmap to use for canvas drawing
-                    using (var saveBitmap = new SKBitmap(width, height, bitmap.ColorType, bitmap.AlphaType))
+                    using (var saveBitmap = new SKBitmap(width, height))//, bitmap.ColorType, bitmap.AlphaType))
                     {
                         // create canvas used to draw into bitmap
                         using (var canvas = new SKCanvas(saveBitmap))
@@ -275,7 +275,7 @@ namespace Emby.Drawing.Skia
                                 using (var paint = new SKPaint())
                                 {
                                     // create image from resized bitmap to apply blur
-                                    using (var filter = SKImageFilter.CreateBlur(5, 5))
+                                    using (var filter = SKImageFilter.CreateBlur(blur, blur))
                                     {
                                         paint.ImageFilter = filter;
                                         canvas.DrawBitmap(resizedBitmap, SKRect.Create(width, height), paint);
@@ -294,8 +294,7 @@ namespace Emby.Drawing.Skia
                                 Double opacity;
                                 if (!Double.TryParse(options.ForegroundLayer, out opacity)) opacity = .4;
 
-                                var foregroundColor = String.Format("#{0:X2}000000", (Byte)((1 - opacity) * 0xFF));
-                                canvas.DrawColor(SKColor.Parse(foregroundColor), SKBlendMode.SrcOver);
+                                canvas.DrawColor(new SKColor(0, 0, 0, (Byte)((1 - opacity) * 0xFF)), SKBlendMode.SrcOver);
                             }
 
                             if (hasIndicator)
